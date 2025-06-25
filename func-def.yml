@@ -1,0 +1,95 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: function
+  annotations:
+    definition.oam.dev/description: |
+      Clone a git repo, build & deploy as a Knative Function (via func CLI),
+      then expose it via ingress.
+spec:
+  schematic:
+    cue:
+      template: |
+        parameter: {
+          name:    string        // name of the Knative Service
+          repo:    string        // git repo URL
+          branch:  string        // git branch
+          runtime: string        // func runtime (python, java, etc)
+          host:    string        // ingress host
+        }
+
+        // Build the full Application
+        app: {
+          apiVersion: "core.oam.dev/v1beta1"
+          kind:       "Application"
+          metadata: name: parameter.name
+          spec: {
+            components: [{
+              name:       parameter.name
+              type:       "function"           // workload type (marker)
+              properties: parameter
+            }]
+            workflow: {
+              steps: [
+                // 1) Sync code
+                {
+                  name: "git-sync"
+                  type: "gitops-sync"
+                  properties: {
+                    url:    parameter.repo
+                    branch: parameter.branch
+                  }
+                },
+                // 2) Build & deploy with func CLI
+                {
+                  name: "build-deploy"
+                  type: "step-job"
+                  properties: {
+                    image:   "ghcr.io/knative/func/func"
+                    command: [
+                      "/bin/sh","-c",
+                      "set -e;\
+                       git clone --single-branch --branch \(parameter.branch) \(parameter.repo) /tmp/func;\
+                       cd /tmp/func;\
+                       func deploy --runtime \(parameter.runtime) \
+                         --name \(parameter.name) \
+                         --namespace $VELA_APP_NAMESPACE \
+                         --confirm --build"
+                    ]
+                  }
+                },
+                // 3) Expose via Ingress
+                {
+                  name: "expose"
+                  type: "step-job"
+                  properties: {
+                    image: "bitnami/kubectl:latest"
+                    command: [
+                      "/bin/sh","-c",
+                      "cat <<EOF | kubectl apply -f -\n\
+                      apiVersion: networking.k8s.io/v1\n\
+                      kind: Ingress\n\
+                      metadata:\n\
+                        name: \(parameter.name)-ingress\n\
+                        namespace: $VELA_APP_NAMESPACE\n\
+                      spec:\n\
+                        rules:\n\
+                        - host: \(parameter.host)\n\
+                          http:\n\
+                            paths:\n\
+                            - path: /\n\
+                              pathType: Prefix\n\
+                              backend:\n\
+                                service:\n\
+                                  name: \(parameter.name)\n\
+                                  port:\n\
+                                    number: 80\n\
+                      EOF"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+        output: app

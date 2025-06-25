@@ -1,0 +1,26 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: demo-func
+spec:
+  type: function
+  properties:
+    name:    demo-func
+    repo:    "https://github.com/youruser/demo-func"
+    branch:  "main"
+    runtime: "python"
+    host:    "demo-func.example.com"
+---
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: demo-func
+spec:
+  traits:
+    - type: function
+      properties:
+        name:    demo-func
+        repo:    "https://github.com/youruser/demo-func"
+        branch:  "main"
+        runtime: "python"
+        host:    "demo-func.example.com"

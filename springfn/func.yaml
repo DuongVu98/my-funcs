@@ -1,0 +1,23 @@
+# $schema: https://raw.githubusercontent.com/knative/func/refs/tags/v0.36.0/schema/func_yaml-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/knative/func/refs/tags/v0.36.0/schema/func_yaml-schema.json
+specVersion: 0.36.0
+name: springfn
+runtime: springboot
+registry: tony16019
+namespace: default
+created: 2025-06-26T00:36:03.123898907+07:00
+build:
+  builder: pack
+  buildEnvs:
+  - name: BP_NATIVE_IMAGE
+    value: "false"
+  - name: BP_JVM_VERSION
+    value: "21"
+  - name: BP_MAVEN_ACTIVE_PROFILES
+    value: native
+deploy:
+  namespace: default
+  image: index.docker.io/tony16019/springfn@sha256:3d8fbbd169953f8f704210fa9ed151b29361730350d4d1dce62caa37f12be359
+  healthEndpoints:
+    liveness: /actuator/health
+    readiness: /actuator/health
