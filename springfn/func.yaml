@@ -15,6 +15,10 @@ build:
     value: "21"
   - name: BP_MAVEN_ACTIVE_PROFILES
     value: native
+  git:
+    url: https://github.com/DuongVu98/my-funcs.git # required, git repository with the function source code
+    revision: main                                    # optional, git revision to be used (branch, tag, commit)
+    contextDir: springfn                          # optional, needed only if the function is not located in the repository root folder
 deploy:
   namespace: default
   image: index.docker.io/tony16019/springfn@sha256:3d8fbbd169953f8f704210fa9ed151b29361730350d4d1dce62caa37f12be359
