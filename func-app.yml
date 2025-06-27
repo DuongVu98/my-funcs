@@ -72,7 +72,7 @@ spec:
                         - sh
                         - -c
                         - |
-                          cd /workspace/springfn && \
+                          cd /workspace/quarkfn && \
                           func deploy --remote --registry=docker.io/tony16019
                       volumeMounts:
                         - name: source
