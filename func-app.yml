@@ -54,6 +54,10 @@ spec:
                       volumeMounts:
                         - name: docker-graph-storage
                           mountPath: /var/lib/docker
+                        - name: source
+                          mountPath: /workspace
+                        - name: docker-config
+                          mountPath: /docker
                     - name: func
                       image: ghcr.io/knative/func/func
                       env:

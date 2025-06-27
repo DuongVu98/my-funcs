@@ -6,7 +6,6 @@ runtime: springboot
 registry: docker.io/tony16019
 namespace: default
 created: 2025-06-26T00:36:03.123898907+07:00
-# serviceAccountName: func-deployer
 build:
   git:
     url: https://github.com/DuongVu98/my-funcs.git
@@ -22,7 +21,7 @@ build:
     value: native
 deploy:
   namespace: default
-  image: docker.io/tony16019/springfn:latest
+  image: index.docker.io/tony16019/springfn:latest
   healthEndpoints:
     liveness: /actuator/health
     readiness: /actuator/health
