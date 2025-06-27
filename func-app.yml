@@ -1,26 +1,85 @@
 apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: demo-func
+  name: docker-git-app
 spec:
-  type: function
-  properties:
-    name:    demo-func
-    repo:    "https://github.com/youruser/demo-func"
-    branch:  "main"
-    runtime: "python"
-    host:    "demo-func.example.com"
----
-apiVersion: core.oam.dev/v1beta1
-kind: Application
-metadata:
-  name: demo-func
-spec:
-  traits:
-    - type: function
+  components:
+    - name: docker-with-git
+      type: k8s-objects
       properties:
-        name:    demo-func
-        repo:    "https://github.com/youruser/demo-func"
-        branch:  "main"
-        runtime: "python"
-        host:    "demo-func.example.com"
+        objects:
+          - apiVersion: batch/v1
+            kind: Job
+            metadata:
+              name: docker-git-job
+            spec:
+              backoffLimit: 0
+              template:
+                spec:
+                  serviceAccountName: func-deployer
+                  imagePullSecrets:
+                    - name: regcred
+                  volumes:
+                    - name: source
+                      emptyDir: {}
+                    - name: docker-graph-storage
+                      emptyDir: {}
+                    - name: docker-config
+                      secret:
+                        secretName: regcred
+                  initContainers:
+                    - name: clone-repo
+                      image: alpine/git:latest
+                      command:
+                        - git
+                        - clone
+                        - --single-branch
+                        - --branch
+                        - main
+                        - https://github.com/DuongVu98/my-funcs.git
+                        - /workspace
+                      volumeMounts:
+                        - name: source
+                          mountPath: /workspace
+                  containers:
+                    - name: dockerd
+                      image: docker:24-dind
+                      securityContext:
+                        privileged: true
+                      env:
+                        - name: DOCKER_TLS_CERTDIR
+                          value: ""
+                      args:
+                        - --host=tcp://0.0.0.0:2375
+                      volumeMounts:
+                        - name: docker-graph-storage
+                          mountPath: /var/lib/docker
+                    - name: func
+                      image: ghcr.io/knative/func/func
+                      env:
+                        - name: DOCKER_HOST
+                          value: tcp://0.0.0.0:2375
+                        # Tell Docker client where to find credentials
+                        - name: DOCKER_CONFIG
+                          value: /tekton/home/.docker
+                        - name: FUNC_REGISTRY
+                          value: docker.io/tony16019
+                      command:
+                        - sh
+                        - -c
+                        - |
+                          cd /workspace/springfn && \
+                          func deploy --remote --registry=docker.io/tony16019
+                      volumeMounts:
+                        - name: source
+                          mountPath: /workspace
+                        - name: docker-config
+                          mountPath: ~/.docker
+                  restartPolicy: Never
+
+# kubectl create secret docker-registry regcred \
+#   --docker-server=https://index.docker.io/v1/ \
+#   --docker-username=tony16019 \
+#   --docker-password=<your-password> \
+#   --docker-email=<your-email>
+
